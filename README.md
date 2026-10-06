@@ -46,7 +46,7 @@ Abra la terminal y clone el repositorio en su máquina local, luego entre a la c
 ### Paso 4: Configurar y Ejecutar el Frontend (Flutter)
 1. Abra una nueva pestaña o ventana en su terminal y entre a la carpeta de la aplicación móvil con `cd dentalink_app`.
 2. Instale las dependencias de Flutter ejecutando `flutter pub get`.
-3. **Configuración de red:** Abra el archivo de servicios de red en `lib/services/api_services.dart` y modifique la variable `baseUrl` con la dirección IP local de su computadora para permitir que su dispositivo físico o emulador se comunique correctamente con el servidor de Node.js: `static const String baseUrl = 'http://<TU_IP_LOCAL>:3000/api';`.
+3. **Configuración de red:** Abra el archivo de servicios de red en `lib/services/api_services.dart` y modifique la variable `baseUrl` con la dirección IP local de su computadora para permitir que su dispositivo físico o emulador se comunique correctamente con el servidor de Node.js: `static const String baseUrl = 'http://<SU_IP_LOCAL>:3000/api';`.
 4. Ejecute la aplicación en su dispositivo o emulador Android ejecutando `flutter run`.
 
 ---
@@ -59,37 +59,37 @@ Para evaluar el sistema, la autenticación está configurada con un acceso de pr
 ---
 
 ## Evidencias de Funcionamiento
-1. **Autenticación e Inicio de Sesión:
-** Pantalla principal de acceso al sistema utilizando las credenciales de prueba, bloqueando el acceso a usuarios no autorizados.
+1. Autenticación e Inicio de Sesión:
+Pantalla principal de acceso al sistema utilizando las credenciales de prueba, bloqueando el acceso a usuarios no autorizados.
 <p align="center">
   <img src="img/CAPTURA_INICIO_SESION.png" alt="Captura que muestra la pantalla de inicio de sesión" width="300">
 </p>
-** Alerta que se genera si las credenciales ingresadas son incorrectas o no existen en la base de datos.
+Alerta que se genera si las credenciales ingresadas son incorrectas o no existen en la base de datos.
 <p align="center">
   <img src="img/CREDENCIALES_INCORRECTAS.png" alt="Captura de advertencia con credenciales incorrectas o inexistentes" width="300">
 </p>
-** Inicio de sesión con credenciales de prueba.
+Inicio de sesión con credenciales de prueba.
 <p align="center">
   <img src="img/CREDENCIALES.png" alt="Captura de inicio de sesión con credenciales correctas" width="300">
 </p>
-2. **Gestión de Citas:
-** Inicio de la aplicación donde se muestran citas programadas con opciones para confirmar o reagendar.
+2. Gestión de Citas:
+Inicio de la aplicación donde se muestran citas programadas con opciones para confirmar o reagendar.
 <p align="center">
   <img src="img/CAPTURA_INICIO.png" alt="Captura del inicio con citas programadas" width="300">
 </p>
-** En este apartado se muestran las opciones disponibles para poder cambiar la cita.
+En este apartado se muestran las opciones disponibles para poder cambiar la cita.
 <p align="center">
   <img src="img/CAPTURA_REAGENDAR.png" alt="Captura del apartado para reagendar una cita" width="300">
 </p>
-** Se arroja una confirmación del cambio de fecha para la cita.
+Se arroja una confirmación del cambio de fecha para la cita.
 <p align="center">
   <img src="img/CAPTURA_NOTIFICACION.png" alt="Captura con confirmación de cambio de cita exitoso" width="300">
 </p>
-** En este se muestra la cita reagendada en la pantalla de inicio.
+En este se muestra la cita reagendada en la pantalla de inicio.
 <p align="center">
   <img src="img/CAPTURA_REAGENDADA.png" alt="Captura del inicio con citas reagendadas" width="300">
 </p>
-** En este se muestra la cita confirmada en la pantalla de inicio.
+En este se muestra la cita confirmada en la pantalla de inicio.
 <p align="center">
   <img src="img/CAPTURA_CONFIRMADA.png" alt="Captura del inicio con citas confirmadas" width="300">
 </p>
