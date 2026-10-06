@@ -15,8 +15,8 @@ DentaLink es una solución de software orientada al sector odontológico diseña
 
 ## Estructura del Proyecto
 Proyecto DentaLink/
-├── dentalink_app/       # Frontend móvil (Flutter)
-└── dentalink_backend/   # Backend / API RESTful (Node.js & MySQL)
+dentalink_app/       # Frontend móvil (Flutter)
+dentalink_backend/   # Backend / API RESTful (Node.js & MySQL)
 
 ---
 
