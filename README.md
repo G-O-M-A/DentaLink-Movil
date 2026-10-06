@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="img/PORTADADENTALINK.png" alt="Portada de proyecto" width="600">
+  <img src="img/PORTADADENTALINK.jpg" alt="Portada de proyecto" width="600">
 </p>
 
 # DentaLink
@@ -62,36 +62,36 @@ Para evaluar el sistema, la autenticación está configurada con un acceso de pr
 1. **Autenticación e Inicio de Sesión:
 ** Pantalla principal de acceso al sistema utilizando las credenciales de prueba, bloqueando el acceso a usuarios no autorizados.
 <p align="center">
-  <img src="img/CAPTURA_INICIO_SESION.png" alt="Captura que muestra la pantalla de inicio de sesión" width="600">
+  <img src="img/CAPTURA_INICIO_SESION.png" alt="Captura que muestra la pantalla de inicio de sesión" width="300">
 </p>
 ** Alerta que se genera si las credenciales ingresadas son incorrectas o no existen en la base de datos.
 <p align="center">
-  <img src="img/CREDENCIALES_INCORRECTAS.png" alt="Captura de advertencia con credenciales incorrectas o inexistentes" width="600">
+  <img src="img/CREDENCIALES_INCORRECTAS.png" alt="Captura de advertencia con credenciales incorrectas o inexistentes" width="300">
 </p>
 ** Inicio de sesión con credenciales de prueba.
 <p align="center">
-  <img src="img/CREDENCIALES.png" alt="Captura de inicio de sesión con credenciales correctas" width="600">
+  <img src="img/CREDENCIALES.png" alt="Captura de inicio de sesión con credenciales correctas" width="300">
 </p>
 2. **Gestión de Citas:
 ** Inicio de la aplicación donde se muestran citas programadas con opciones para confirmar o reagendar.
 <p align="center">
-  <img src="img/CAPTURA_INICIO.png" alt="Captura del inicio con citas programadas" width="600">
+  <img src="img/CAPTURA_INICIO.png" alt="Captura del inicio con citas programadas" width="300">
 </p>
 ** En este apartado se muestran las opciones disponibles para poder cambiar la cita.
 <p align="center">
-  <img src="img/CAPTURA_REAGENDAR.png" alt="Captura del apartado para reagendar una cita" width="600">
+  <img src="img/CAPTURA_REAGENDAR.png" alt="Captura del apartado para reagendar una cita" width="300">
 </p>
 ** Se arroja una confirmación del cambio de fecha para la cita.
 <p align="center">
-  <img src="img/CAPTURA_NOTIFICACION.png" alt="Captura con confirmación de cambio de cita exitoso" width="600">
+  <img src="img/CAPTURA_NOTIFICACION.png" alt="Captura con confirmación de cambio de cita exitoso" width="300">
 </p>
 ** En este se muestra la cita reagendada en la pantalla de inicio.
 <p align="center">
-  <img src="img/CAPTURA_REAGENDADA.png" alt="Captura del inicio con citas reagendadas" width="600">
+  <img src="img/CAPTURA_REAGENDADA.png" alt="Captura del inicio con citas reagendadas" width="300">
 </p>
 ** En este se muestra la cita confirmada en la pantalla de inicio.
 <p align="center">
-  <img src="img/CAPTURA_CONFIRMADA.png" alt="Captura del inicio con citas confirmadas" width="600">
+  <img src="img/CAPTURA_CONFIRMADA.png" alt="Captura del inicio con citas confirmadas" width="300">
 </p>
 
 
