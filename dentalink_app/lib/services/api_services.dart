@@ -2,11 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  //A quien lea esto, la IP en este parámetro es para hacer una conexión al servidor,
-  //que se corre de manera local, desde un dispositivo móvil, por lo cuál antes de
-  //crear el APK se debe configurar esta ip con la que marca la red a la que están
-  //conectados ambos dispositivos, esto se configuró así para las pruebas que se realizaron
-  //durante el desarrollo 
   static const String baseUrl = 'http://172.18.1.180:3000/api'; 
 
   static Future<Map<String, dynamic>?> login(String email, String password) async {
