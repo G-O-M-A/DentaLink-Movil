@@ -1,321 +1,261 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:dentalink_movil/features/home/views/prescription_history_view.dart';
+import 'package:flutter/services.dart';
+import 'package:dentalink_movil/core/animaciones.dart';
+import 'package:dentalink_movil/core/api.dart';
+import 'package:dentalink_movil/core/tema.dart';
+import 'package:dentalink_movil/features/home/views/home_view.dart';
 
+/// "Mis recetas": una sola lista, de la más reciente a la más antigua.
+/// (Antes decía "receta actual / pasadas", pero una receta no caduca.)
+/// Cada receta se abre y se cierra al tocarla; la más reciente aparece abierta.
 class PrescriptionsView extends StatefulWidget {
-  final String userEmail;
-  const PrescriptionsView({super.key, this.userEmail = 'luis1@gmail.com'});
+  const PrescriptionsView({super.key});
 
   @override
   State<PrescriptionsView> createState() => _PrescriptionsViewState();
 }
 
 class _PrescriptionsViewState extends State<PrescriptionsView> {
-  // Colores oficiales de la estética web de Dentalink
-  final Color primaryColor = const Color(0xFF00A8B5);
-  final Color cardBgColor = const Color(0xFFE8F7F8);
+  // Se conserva al cambiar de pestaña para que aparezca al instante
+  static List<Receta>? _cache;
 
-  bool isLoading = true;
-  bool hasAssignedPrescription = false;
-  
-  // Datos puramente de texto para el recordatorio
-  String currentFolio = '';
-  String reminderText = '';
-  String emissionDate = '';
+  List<Receta>? _recetas = _cache;
+  String? _error;
+  final Set<int> _abiertas = <int>{};
 
-  // Historial de recetas en texto
-  List<Map<String, String>> pastPrescriptions = [];
   @override
   void initState() {
     super.initState();
-    _loadPrescriptionsFromDatabase();
+    if (_recetas != null && _recetas!.isNotEmpty) _abiertas.add(_recetas!.first.id);
+    _cargar();
   }
 
-  // Método para extraer los datos de 'pacientes' y sus 'recetas' en Supabase
-  Future<void> _loadPrescriptionsFromDatabase() async {
+  Future<void> _cargar() async {
+    setState(() => _error = null);
     try {
-      final supabase = Supabase.instance.client;
-
-      print('DEBUG PRESCRIPTIONS: Buscando paciente con correo: ${widget.userEmail}');
-
-      // 1. Obtener datos del paciente usando el correo
-      final patientResponse = await supabase
-          .from('pacientes')
-          .select('id')
-          .eq('correo', widget.userEmail)
-          .maybeSingle();
-
-      if (patientResponse == null) {
-        print('DEBUG PRESCRIPTIONS: No se encontró ningún paciente con este correo.');
-        if (mounted) {
-          setState(() {
-            isLoading = false;
-            hasAssignedPrescription = false;
-          });
-        }
-        return;
+      final r = await Api.recetas();
+      _cache = r;
+      if (!mounted) return;
+      setState(() {
+        if (_recetas == null && r.isNotEmpty) _abiertas.add(r.first.id);
+        _recetas = r;
+      });
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      if (e.sesionInvalida) {
+        _cache = null;
+        return salirAlLogin(context, aviso: e.mensaje);
       }
-
-      final int patientId = patientResponse['id'];
-      print('DEBUG PRESCRIPTIONS: Paciente encontrado -> ID: $patientId');
-
-      // 2. Consultar las recetas asociadas a este pacienteId
-      final List<dynamic> recetasResponse = await supabase
-          .from('recetas')
-          .select()
-          .eq('pacienteId', patientId)
-          .order('createdAt', ascending: false);
-
-      print('DEBUG PRESCRIPTIONS: Recetas encontradas en la BD para este ID: $recetasResponse');
-
-      if (recetasResponse.isNotEmpty) {
-        final List<Map<String, dynamic>> listaRecetas =
-            recetasResponse.map((r) => Map<String, dynamic>.from(r)).toList();
-
-        final latest = listaRecetas.first;
-        final String folio = latest['folio'] ?? 'RX';
-        final createdAtStr = latest['createdAt']?.toString() ?? '';
-        final fechaFormateada = createdAtStr.isNotEmpty ? createdAtStr.substring(0, 10) : '';
-
-        // Procesamos el JSON de medicamentos
-        final meds = latest['medicamentos'];
-        String medicinesText = '';
-        
-        if (meds is List) {
-          medicinesText = meds.map((m) {
-            final nombre = m['nombre'] ?? '';
-            final dosis = m['dosis'] ?? '';
-            final frecuencia = m['frecuencia'] ?? '';
-            if (dosis.isEmpty && frecuencia.isEmpty) {
-              return '• $nombre';
-            }
-            return '• $nombre\n  Dosis: $dosis\n  Indicación: $frecuencia';
-          }).join('\n\n');
-        } else {
-          medicinesText = meds.toString();
-        }
-
-        // Construimos el historial de recetas
-       List<Map<String, String>> historyList = listaRecetas.map((item) {
-          final f = item['folio'] ?? 'Receta';
-          final fecha = item['createdAt']?.toString().substring(0, 10) ?? '';
-          return {
-            'title': 'Folio: $f ($fecha)',
-            'subtitle': 'Recordatorio de medicamentos recetados',
-          };
-        }).toList();
-
-        if (mounted) {
-          setState(() {
-            hasAssignedPrescription = true;
-            currentFolio = folio;
-            reminderText = medicinesText.isNotEmpty ? medicinesText : 'Sin indicaciones especificadas';
-            emissionDate = 'Fecha de emisión: $fechaFormateada';
-            pastPrescriptions = historyList;
-            isLoading = false;
-          });
-        }
-      } else {
-        print('DEBUG PRESCRIPTIONS: Este paciente no tiene recetas registradas.');
-        if (mounted) {
-          setState(() {
-            hasAssignedPrescription = false;
-            isLoading = false;
-          });
-        }
-      }
-    } catch (e) {
-      print('DEBUG PRESCRIPTIONS EXCEPTION: $e');
-      debugPrint('Error al cargar recetas: $e');
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
+      setState(() => _error = e.mensaje);
     }
+  }
+
+  void _alternar(int id) {
+    HapticFeedback.selectionClick();
+    setState(() => _abiertas.contains(id) ? _abiertas.remove(id) : _abiertas.add(id));
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // --- ENCABEZADO ---
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Emisión de Recetas',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Recordatorio de medicamentos e indicaciones prescritas.',
-                style: TextStyle(color: Colors.grey, fontSize: 13),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+    final p = Paleta.of(context);
+    final recetas = _recetas;
 
-          // --- SECCIÓN: RECETA ACTUAL ---
-          Container(
-            padding: const EdgeInsets.all(18),
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: cardBgColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: primaryColor.withOpacity(0.2)),
-            ),
+    final List<Widget> contenido;
+    if (recetas == null && _error == null) {
+      contenido = const [
+        Esqueleto(alto: 92),
+        SizedBox(height: 12),
+        Esqueleto(alto: 92),
+        SizedBox(height: 12),
+        Esqueleto(alto: 92),
+      ];
+    } else if (recetas == null) {
+      contenido = [_mensaje(p, Icons.wifi_off_rounded, 'No se pudieron cargar', _error ?? '', accion: true)];
+    } else if (recetas.isEmpty) {
+      contenido = [
+        _mensaje(p, Icons.receipt_long_outlined, 'Aún no tienes recetas', 'Cuando tu doctor te recete algo, aparecerá aquí.'),
+      ];
+    } else {
+      contenido = [
+        for (var i = 0; i < recetas.length; i++) Aparecer(orden: i + 1, child: _tarjeta(p, recetas[i], i == 0)),
+      ];
+    }
+
+    return RefreshIndicator(
+      color: Paleta.primario,
+      onRefresh: _cargar,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        children: [
+          Aparecer(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Receta actual ${currentFolio.isNotEmpty ? "($currentFolio)" : ""}',
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                isLoading
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(20.0),
-                          child: CircularProgressIndicator(color: Color(0xFF00A8B5)),
-                        ),
-                      )
-                    : hasAssignedPrescription
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: primaryColor.withOpacity(0.3)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      reminderText,
-                                      style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      emissionDate,
-                                      style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                'Nota: Este texto es meramente un recordatorio. Para surtir medicamentos, presenta tu receta física firmada.',
-                                style: TextStyle(color: Colors.black54, fontSize: 11, fontStyle: FontStyle.italic),
-                              ),
-                            ],
-                          )
-                        : Center(
-                            child: Column(
-                              children: [
-                                const SizedBox(height: 12),
-                                Icon(Icons.description_outlined, size: 48, color: primaryColor.withOpacity(0.5)),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'No hay recetas registradas actualmente.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Las indicaciones de tus medicamentos aparecerán aquí como recordatorio.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-                            ),
-                          ),
+                Text('Mis recetas', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: p.texto)),
+                const SizedBox(height: 2),
+                Text('Las indicaciones que te ha dado tu doctor.', style: TextStyle(color: p.texto2, fontSize: 14)),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
+          ...contenido,
+        ],
+      ),
+    );
+  }
 
-          // --- SECCIÓN: HISTORIAL DE RECETAS ---
-          InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PrescriptionHistoryView(
-                    prescriptions: pastPrescriptions,
-                  ),
-                ),
-              );
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: cardBgColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: primaryColor.withOpacity(0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _tarjeta(Paleta p, Receta r, bool reciente) {
+    final abierta = _abiertas.contains(r.id);
+    final n = r.medicamentos.length;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: p.superficie,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: abierta ? Paleta.primario : p.linea, width: abierta ? 1.5 : 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Pulsable(
+            escala: 0.98,
+            alTocar: () => _alternar(r.id),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+              child: Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Registro de recetas',
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(color: p.tinte, borderRadius: BorderRadius.circular(12)),
+                    child: Icon(Icons.receipt_long_outlined, color: p.tinteTexto, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(Fechas.corta(r.fecha),
+                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: p.texto)),
+                            ),
+                            if (reciente) ...[
+                              const SizedBox(width: 8),
+                              Etiqueta('Más reciente', fondo: p.tinte, color: p.tinteTexto),
+                            ],
+                          ],
                         ),
-                      ),
-                      Icon(Icons.arrow_forward_ios, size: 14, color: primaryColor),
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          '$n ${n == 1 ? 'medicamento' : 'medicamentos'} · ${r.clinica ?? 'Folio ${r.folio}'}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: p.texto2, fontSize: 12.5),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${pastPrescriptions.length} recetas en el historial de recordatorios',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Toca para ver el detalle de tus indicaciones anteriores.',
-                    style: TextStyle(color: Colors.grey, fontSize: 11),
+                  AnimatedRotation(
+                    turns: abierta ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOutCubic,
+                    child: Icon(Icons.expand_more_rounded, color: p.texto3),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: !abierta
+                ? const SizedBox(width: double.infinity)
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Divider(height: 1, color: p.linea),
+                      if (r.medicamentos.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text('Sin indicaciones registradas.', style: TextStyle(color: p.texto2)),
+                        )
+                      else
+                        for (final m in r.medicamentos) _medicamento(p, m),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                        child: Text('Folio ${r.folio}', style: TextStyle(color: p.texto3, fontSize: 12)),
+                      ),
+                    ],
+                  ),
+          ),
         ],
       ),
     );
   }
+
+  Widget _medicamento(Paleta p, Medicamento m) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(color: p.superficie2, borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.medication_outlined, size: 19, color: Paleta.primario),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(m.nombre, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: p.texto)),
+                  if (m.dosis.isNotEmpty) Text(m.dosis, style: TextStyle(color: p.texto2, fontSize: 13.5)),
+                  if (m.frecuencia.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 1),
+                            child: Icon(Icons.schedule_rounded, size: 15, color: p.tinteTexto),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(m.frecuencia,
+                                style: TextStyle(color: p.texto, fontSize: 13.5, height: 1.35)),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _mensaje(Paleta p, IconData icono, String titulo, String texto, {bool accion = false}) => Aparecer(
+        child: Container(
+          padding: const EdgeInsets.all(26),
+          decoration: BoxDecoration(color: p.superficie, borderRadius: BorderRadius.circular(18), border: Border.all(color: p.linea)),
+          child: Column(
+            children: [
+              Icon(icono, size: 46, color: p.lineaFuerte),
+              const SizedBox(height: 10),
+              Text(titulo, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: p.texto)),
+              const SizedBox(height: 4),
+              Text(texto, textAlign: TextAlign.center, style: TextStyle(color: p.texto2, fontSize: 13)),
+              if (accion) ...[
+                const SizedBox(height: 14),
+                OutlinedButton(onPressed: _cargar, child: const Text('Reintentar')),
+              ],
+            ],
+          ),
+        ),
+      );
 }
